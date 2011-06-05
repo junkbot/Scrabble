@@ -10,6 +10,10 @@
 
 /* Constants */
 
+#ifndef __TRIE
+#include "trie.h"
+#endif
+
 #ifndef TRUE
 typedef int bool;
 #define TRUE 1
@@ -39,6 +43,8 @@ typedef int bool;
 #define ILLEGAL_MOVE_SCORE (-(1<<30))
 
 #define FULL_RACK_BONUS 50
+
+#define PASS -1
 
 // (struct) Typedefs
 
@@ -140,6 +146,9 @@ int scoreMove(player playerToMove, int row, int col, wordRef wordToPlay,
 
 void playMove(player playerToMove, int row, int col, wordRef wordToPlay,
               direction dirToMove);
+
+// dictionary
+void setDictTrie(Trie trieToSet);
 
 /* Global Vars */
 extern letter tileBag[TOTAL_TILES];

@@ -6,9 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <ctype.h>
 
 #include "game.h"
+
+#ifndef __TRIE
 #include "trie.h"
+#endif
 
 #define DEBUG
 #ifdef DEBUG
@@ -20,33 +24,57 @@
 // command-line prints
 #define EMPTY_SQUARE_CHAR "."
 
+#define DICTIONARY_FILE "sowpods.txt"
+
+#define HUMAN_MOVE_PROMPT "Enter turn [row] [col] [word] [horizontal:0|vertical:1] or -1 to pass: "
+
 // globals
 
 void initialiseGame(void);
 void printAll(void);
+void playTurn(void);
 
 static void clearRacks(void);
 static void dealRacks(void);
+static void placeFirstTile(void);
+static void initDict(void);
 
 static void printBoard(void);
 static void printScores(void);
 static void printRacks(void);
 
-int main(int argc, char *argv[]) {
+player currentPlayer;
+int numConsecPasses;
 
+int main(int argc, char *argv[]) {
+    
     initialiseGame();
-    printAll();
+
+    int turnNumber = 0;
+    numConsecPasses = 0;
+
+    while(numConsecPasses < NUM_PLAYERS) {
+        currentPlayer = turnNumber % NUM_PLAYERS;
+
+        printAll();
+        playTurn();
+
+        turnNumber++;
+    }
 
 	return EXIT_SUCCESS;
 }
 
 void initialiseGame(void) {
+    initDict();
+
     shuffleBag();
 
     clearRacks();
     dealRacks();
 
     resetBoard();
+    placeFirstTile();
 }
 
 void printAll(void) {
@@ -57,6 +85,53 @@ void printAll(void) {
     printScores();
     printf("\n");
     printf("%d tiles remaining in the bag\n",numTilesRemaining());
+    printf("\n");
+}
+
+void playTurn(void) { 
+    bool moveLegal = FALSE;
+    while(moveLegal != TRUE) {
+
+        printf(HUMAN_MOVE_PROMPT);
+
+        int row, col;
+        word wordToPlay;
+        direction dir;
+        
+        scanf("%d",&row);
+
+        if(row == PASS) {
+            D("passed!\n");
+            playMove(currentPlayer,PASS,PASS,NULL,HORIZONTAL);
+            D("processed pass\n");
+            numConsecPasses++;
+            moveLegal = TRUE;
+        } else {
+            numConsecPasses = 0;
+            scanf("%d",&col);
+
+            scanf(" %s ",wordToPlay);
+            scanf("%d",&dir);
+
+            int wordLength = strlen(wordToPlay);
+
+            int i;
+            for(i=0;i<wordLength;i++) {
+                wordToPlay[i] = toupper(wordToPlay[i]);
+            }
+
+#ifdef DEBUG
+            printf("%s @ (%d,%d) going %d\n",wordToPlay,row,col,dir);
+#endif
+
+            if(isLegalMove(currentPlayer,row,col,wordToPlay,dir)) {
+                playMove(currentPlayer,row,col,wordToPlay,dir);
+                moveLegal = TRUE;
+            } else {
+                printf("Illegal move.\n");
+            }
+        }
+    }
 }
 
 static void clearRacks(void) {
@@ -73,6 +148,20 @@ static void dealRacks(void) {
 	for(i=0;i<NUM_PLAYERS*RACK_SIZE;i++) {
         addSingleLetterToRack( getPlayerRack(i % NUM_PLAYERS), getNextTile() );
 	}
+}
+
+static void placeFirstTile(void) {
+    int midR = BOARD_SIZE/2;
+    int midC = BOARD_SIZE/2;
+
+    letter letterToPlace = getNextTile();
+    setCell(midR, midC, letterToPlace);
+}
+
+static void initDict(void) {
+    FILE *dictionaryFile = fopen(DICTIONARY_FILE,"r");
+    Trie dictTrie = trieFromFile(dictionaryFile);
+    setDictTrie(dictTrie);
 }
 
 static void printBoard(void) {
@@ -94,6 +183,7 @@ static void printBoard(void) {
             }
 
             letter curLetter = getCell(i, j);
+//            D("letter @ (%d,%d) is '%c'\n",i,j,curLetter);
             if(curLetter == INVALID_LETTER) {
                 printf(EMPTY_SQUARE_CHAR);
             } else {

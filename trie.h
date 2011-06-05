@@ -7,6 +7,10 @@
 // for quick and easy dictionary lookup to test legality for
 // both human plays and AIs
 
+#include <stdio.h>
+
+#define __TRIE
+
 #ifndef TRUE
 typedef int bool;
 #define TRUE 1
@@ -21,6 +25,8 @@ typedef int bool;
 
 #define FIRST_INDEX 0
 #define ADD_FOR_NEXT_INDEX 1
+
+#define MAX_WORD_LENGTH 20
 
 typedef struct _trie trie;
 typedef trie *Trie;
@@ -44,3 +50,5 @@ bool hasWord(Trie trieToInspect, const char *wordToLookFor);
 // adds a word to the given Trie
 void addWord(Trie trieToModify, const char *wordToAdd);
 
+// reads in a list of words from a file and returns a Trie with the words
+Trie trieFromFile(FILE *inputFile);

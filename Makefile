@@ -1,5 +1,5 @@
 C := gcc
-CFLAGS += -O -Wall -Werror
+CFLAGS += -O -Wall
 
 test_extend:
 	make test CFLAGS=-DEXTEND
@@ -13,7 +13,7 @@ testGame: game
 runGame: game trie
 	$(C) $(CFLAGS) -o runGame runGame.c game.o trie.o
 
-game:
+game: trie
 	$(C) $(CFLAGS) -c game.c
 
 testTrie: trie

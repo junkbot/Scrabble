@@ -10,6 +10,8 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <ctype.h>
 
 // a macro which shortens my debugging output statements
 // they disappear at compile-time if i comment out the following line
@@ -128,6 +130,23 @@ void addWord(Trie trieToModify, const char *wordToAdd) {
 
     // increase number of words in the Trie
     trieToModify->size++;
+}
+
+Trie trieFromFile(FILE *inputFile) {
+    Trie fileTrie = createTrie();
+
+    char word[MAX_WORD_LENGTH];
+    while(fscanf(inputFile, " %s ",word) != EOF) {
+        int wordLength = strlen(word);
+        int i;
+        for(i=0;i<wordLength;i++) {
+            word[i] = toupper(word[i]);
+            assert(FIRST_LETTER <= word[i]);
+            assert(word[i] <= LAST_LETTER);
+        }
+        addWord(fileTrie, word);
+    }
+    return fileTrie;
 }
 
 static int letterToNumber(char letterToMap) {

@@ -4,10 +4,22 @@
 
 #include "game.h"
 
+#ifndef __TRIE
+#include "trie.h"
+#endif
+
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+
+#define DEBUG
+#ifdef DEBUG
+#include <stdio.h>
+#define D(x...) fprintf(stderr,x)
+#else
+#define D(x...)
+#endif
 
 /* GLOBALS */
 int letterValues[NUM_LETTERS] = {1,3,3,2,1,4,2,4,1,8,5,1,3,
@@ -30,6 +42,9 @@ board gameBoard;
 
 // one rack for each player
 rack playerRacks[MAX_PLAYERS];
+
+// holds the game dictionary
+Trie dict;
 
 // scores of each player
 // TODO: implement a void resetScores(void) function
@@ -65,6 +80,8 @@ void resetBoard(void) {
 }
 
 void setCell(int row, int col, letter tileToPlace) {
+    D("setCell(%d,%d,'%c')\n",row,col,tileToPlace);
+
     assert(row >= 0);
     assert(row < BOARD_SIZE);
     assert(col >= 0);
@@ -203,6 +220,7 @@ bool isLegalMove(player playerToMove, int row, int col, wordRef wordToPlay,
     assert(playerToMove < NUM_PLAYERS);
 
     if(row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) {
+        D("co-ordinates out of bounds.\n");
         return FALSE;
     }
 
@@ -216,6 +234,7 @@ bool isLegalMove(player playerToMove, int row, int col, wordRef wordToPlay,
     // for each letter in the word, check that it is a valid letter
     for(i=0;i<wordLength;i++) {
         if(isValidLetter(wordToPlay[i]) == FALSE) {
+            D("invalid letter: '%c'\n",wordToPlay[i]);
             return FALSE;
         }
     }
@@ -229,6 +248,7 @@ bool isLegalMove(player playerToMove, int row, int col, wordRef wordToPlay,
     }
 
     if(lastCell >= BOARD_SIZE) {
+        D("word is too long.\n");
         return FALSE;
     }
 
@@ -268,13 +288,41 @@ bool isLegalMove(player playerToMove, int row, int col, wordRef wordToPlay,
             // existing tile on board
             if(curLetterOnBoard != wordToPlay[i]) {
                 // check it matches
+                printf("letter %d doesn't match board tile.\n",i+1);
+                return FALSE;
+            }
+        }
+        
+        // check that no crosswords are formed
+        int dx[] = {0,0,1,-1};
+        int dy[] = {1,-1,0,0};
+
+        int j = INITIAL;
+        if(dirToMove == HORIZONTAL) {
+            j = 0;
+        } else if(dirToMove == VERTICAL) {
+            j = 2;
+        }
+
+        int stop = j+2;
+        for(;j<stop;j++) {
+            int lr = letterRow + dy[j];
+            int lc = letterCol + dx[j];
+//            D("cur (%d,%d): '%c': %d checking (%d,%d): '%c': %d\n",letterRow,letterCol,getCell(letterRow,letterCol),isValidLetter(getCell(letterRow,letterCol)),lr,lc,getCell(lr,lc),isValidLetter(getCell(lr,lc)));
+            if(lr >= 0 && lr < BOARD_SIZE && lc >= 0 && lc < BOARD_SIZE &&
+               isValidLetter( getCell(letterRow,letterCol) ) == FALSE &&
+               isValidLetter( getCell(lr,lc) ) != FALSE) {
+                // crossword formed
+                printf("crossword formed with (%d,%d)\n",lr,lc);
                 return FALSE;
             }
         }
     }
 
-    if(!oneLetterOnBoard) {
+    if(oneLetterOnBoard == FALSE) {
         // no letters on the board
+        D("not linked to any existing letters on board\n");
+
         return FALSE;
     }
 
@@ -283,8 +331,16 @@ bool isLegalMove(player playerToMove, int row, int col, wordRef wordToPlay,
         int numOfJOnRack = numCharInString(j, currentPlayerRack);
 
         if(numOfJInWord > numOfJOnRack) {
+            printf("not enough of %c on rack\n",j);
             return FALSE;
         }
+    }
+
+    // check if the words is in the dictionary
+
+    if(hasWord(dict, wordToPlay) == FALSE) {
+        printf("'%s' not in the dictionary\n",wordToPlay);
+        return FALSE;
     }
 
     // passed all tests
@@ -311,11 +367,6 @@ int scoreMove(player playerToMove, int row, int col, wordRef wordToPlay,
             score += scoreLetter(wordToPlay[i]);
         }
 
-        // check if it gets the full rack bonus
-        if(wordLength == RACK_SIZE) {
-            score += FULL_RACK_BONUS;
-        }
-
         return score;
     } else {
         return ILLEGAL_MOVE_SCORE;
@@ -324,45 +375,61 @@ int scoreMove(player playerToMove, int row, int col, wordRef wordToPlay,
 
 void playMove(player playerToMove, int row, int col, wordRef wordToPlay,
               direction dirToMove) {
-    assert(wordToPlay != NULL);
-    assert(playerToMove >= 0);
-    assert(playerToMove < BOARD_SIZE);
-    assert(isLegalMove(playerToMove,row,col,wordToPlay,dirToMove));
+    if(row != PASS) {
+        assert(wordToPlay != NULL);
+        assert(playerToMove >= 0);
+        assert(playerToMove < NUM_PLAYERS);
+        assert(isLegalMove(playerToMove,row,col,wordToPlay,dirToMove));
 
-    int wordLength = strlen(wordToPlay);
+        int wordLength = strlen(wordToPlay);
 
-    // place each tile on the board
-    int i;
-    for(i=0;i<wordLength;i++) {
-        int r = row;
-        int c = col;
+        // place each tile on the board
+        int numTilesPlaced = 0;
 
-        if(dirToMove == HORIZONTAL) {
-            c += i;
-        } else if(dirToMove == VERTICAL) {
-            r += i;
-        }
-        
-        letter curLetter = getCell(r,c);
-        if(isValidLetter(curLetter) == FALSE) {
-            // blank square
-            setCell(r,c,curLetter);
+        int i;
+        for(i=0;i<wordLength;i++) {
+            int r = row;
+            int c = col;
 
-            deleteSingleLetterFromRack( getPlayerRack(playerToMove),
-                                        wordToPlay[i] );
+            if(dirToMove == HORIZONTAL) {
+                c += i;
+            } else if(dirToMove == VERTICAL) {
+                r += i;
+            }
+            
+            // current letter on the board
+            letter curLetter = getCell(r,c);
+            if(isValidLetter(curLetter) == FALSE) {
+                // blank square
+                setCell(r,c,wordToPlay[i]);
+                
+                deleteSingleLetterFromRack( getPlayerRack(playerToMove),
+                                            wordToPlay[i] );
 
-            // check if there's still any tiles left
-            if(numTilesRemaining() > 0) {
-                addSingleLetterToRack( getPlayerRack(playerToMove),
-                                       getNextTile() );
+                numTilesPlaced++;
+
+                // check if there's still any tiles left
+                if(numTilesRemaining() > 0) {
+                    addSingleLetterToRack( getPlayerRack(playerToMove),
+                                           getNextTile() );
+                }
             }
         }
-    }
 
-    // adjust scores
-    setScore( playerToMove, getScore(playerToMove) +
-                           scoreMove(playerToMove, row, col, wordToPlay,
-                                     dirToMove) );
+        int moveScore = scoreMove(playerToMove, row, col, wordToPlay, dirToMove);
+
+        if(numTilesPlaced == RACK_SIZE) {
+            moveScore += FULL_RACK_BONUS;
+        }
+
+        // adjust scores
+        setScore( playerToMove, getScore(playerToMove) + moveScore );
+    }
+}
+
+// dict
+void setDictTrie(Trie trieToSet) {
+    dict = trieToSet;
 }
 
 /* STATIC FUNCTION IMPLEMENTATIONS */
@@ -390,7 +457,7 @@ static int mapLetterToInt(letter letterToMap) {
 }
 
 static bool isValidLetter(letter letterToCheck) {
-    return (letterToCheck >= FIRST_LETTER && letterToCheck >= LAST_LETTER);
+    return (letterToCheck >= FIRST_LETTER && letterToCheck <= LAST_LETTER);
 }
 
 static int scoreLetter(letter letterToScore) {
