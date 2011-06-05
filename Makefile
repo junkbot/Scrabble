@@ -10,6 +10,9 @@ test: testGame testTrie
 testGame: game
 	$(C) $(CFLAGS) -c testGame.c
 
+runGame: game trie
+	$(C) $(CFLAGS) -o runGame runGame.c game.o trie.o
+
 game:
 	$(C) $(CFLAGS) -c game.c
 

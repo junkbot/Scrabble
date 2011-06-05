@@ -7,8 +7,11 @@
 // for quick and easy dictionary lookup to test legality for
 // both human plays and AIs
 
+#ifndef TRUE
+typedef int bool;
 #define TRUE 1
 #define FALSE 0
+#endif
 
 #define NUM_OF_LETTERS 26
 
@@ -19,7 +22,6 @@
 #define FIRST_INDEX 0
 #define ADD_FOR_NEXT_INDEX 1
 
-typedef int bool;
 typedef struct _trie trie;
 typedef trie *Trie;
 

@@ -6,8 +6,24 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
+#include <time.h>
 
 /* GLOBALS */
+int letterValues[NUM_LETTERS] = {1,3,3,2,1,4,2,4,1,8,5,1,3,
+								 1,1,3,10,1,1,1,1,4,4,8,4,10};
+
+int nextTile;
+letter tileBag[TOTAL_TILES] = "AAAAAAAAAB"
+                              "BCCDDDDEEE"
+                              "EEEEEEEEEF"
+                              "FGGGHHIIII"
+                              "IIIIIJKLLL"
+                              "LMMNNNNNNO"
+                              "OOOOOOOPPQ"
+                              "RRRRRRSSSS"
+                              "TTTTTTUUUU"
+                              "VVWWXYYZ";
 
 // holds the current gameboard
 board gameBoard;
@@ -27,12 +43,21 @@ static bool isValidLetter(letter letterToCheck);
 
 static int scoreLetter(letter letterToScore);
 
+static void sortRack(rackRef rackToSort);
+
+// comparison function for sorting alphabetically
+// returns:
+// < 0 if a < b
+// 0 if a = b
+// > 0 if a > b
+static int alphabeticCompare(const void *a, const void *b);
+
 /* IMPLEMENTATION */
 
 void resetBoard(void) {
     int i,j;
-    for(i=0;i<BOARD_SIZE;i++) {
-        for(j=0;j<BOARD_SIZE;j++) {
+    for(i=0;i<BOARD_SIZE+1;i++) {
+        for(j=0;j<BOARD_SIZE+1;j++) {
             // can't use set cell for an invalid letter
             gameBoard[i][j] = INVALID_LETTER;
         }
@@ -66,10 +91,110 @@ rackRef getPlayerRack(player playerNum) {
     return playerRacks[playerNum];
 }
 
+void clearRack(rackRef rackToClear) {
+	int i;
+	for(i=0;i<RACK_SIZE;i++) {
+		rackToClear[i] = INVALID_LETTER;
+	}
+}
+
+void deleteSingleLetterFromRack(rackRef rackToChange, letter letterToRemove) {
+	assert(FIRST_LETTER <= letterToRemove);
+	assert(letterToRemove <= LAST_LETTER);
+	assert(rackToChange != NULL);
+
+	int foundPos = INITIAL;
+	int numLettersOnRack = rackSize(rackToChange);
+
+	int i;
+	for(i=0;i<numLettersOnRack;i++) {
+		if(rackToChange[i] == letterToRemove) {
+			foundPos = i;
+		}
+	}
+
+	assert(foundPos != INITIAL);
+
+	for(i=foundPos+1;i<numLettersOnRack;i++) {
+		rackToChange[i-1] = rackToChange[i];
+	}
+
+	rackToChange[numLettersOnRack-1] = INVALID_LETTER;
+
+    sortRack(rackToChange);
+}
+
+void addSingleLetterToRack(rackRef rackToChange, letter letterToAdd) {
+	assert(FIRST_LETTER <= letterToAdd);
+	assert(letterToAdd <= LAST_LETTER);
+	assert(rackToChange != NULL);
+	
+	int numLettersOnRack = rackSize(rackToChange);
+	assert(numLettersOnRack < RACK_SIZE);
+
+	rackToChange[numLettersOnRack] = letterToAdd;
+
+    sortRack(rackToChange);
+}
+
 int rackSize(rackRef rackToCheck) {
     assert(rackToCheck != NULL);
     return strlen(rackToCheck);
 }
+
+// bag
+
+void shuffleBag(void) {
+    nextTile = 0;
+
+    srand( time(NULL) );
+
+    int i;
+    for(i=0;i<TOTAL_TILES;i++) {
+        int swapPos = (rand() % (TOTAL_TILES-i))+i;
+        letter temp = tileBag[i];
+        tileBag[i] = tileBag[swapPos];
+        tileBag[swapPos] = temp;
+    }
+
+#ifdef DEBUG
+    for(i=0;i<TOTAL_TILES;i++) {
+        D("%c ",tileBag[i]);
+    }
+    D("\n");
+#endif
+}
+
+letter getNextTile(void) {
+    assert(nextTile != TOTAL_TILES);
+
+    nextTile++;
+    return tileBag[nextTile-1];
+}
+
+int numTilesRemaining(void) {
+    assert(nextTile <= TOTAL_TILES);
+    return TOTAL_TILES - nextTile;
+}
+
+// returns the score of the given player
+int getScore(player playerToCheck) {
+    assert(playerToCheck >= 0);
+    assert(playerToCheck < NUM_PLAYERS);
+
+    return playerScores[playerToCheck];
+}
+
+// sets the score of the given player
+void setScore(player playerToModify, int scoreToSet) {
+    assert(playerToModify >= 0);
+    assert(playerToModify < NUM_PLAYERS);
+    assert(scoreToSet >= 0);
+
+    playerScores[playerToModify] = scoreToSet;
+}
+
+// move
 
 bool isLegalMove(player playerToMove, int row, int col, wordRef wordToPlay,
                  direction dirToMove) {
@@ -113,6 +238,9 @@ bool isLegalMove(player playerToMove, int row, int col, wordRef wordToPlay,
     //   word will lie match the corresponding letter in the word
     int numOfEachLetter[NUM_LETTERS] = {0};
 
+    // check if any of the letters is on the board
+    bool oneLetterOnBoard = FALSE;
+
     for(i=0;i<wordLength;i++) {
         int letterRow = row;
         int letterCol = col;
@@ -132,17 +260,26 @@ bool isLegalMove(player playerToMove, int row, int col, wordRef wordToPlay,
         if(isValidLetter(curLetterOnBoard) == FALSE) {
             // blank square
             int letterMapping = mapLetterToInt(wordToPlay[i]);
+
+            // only add because it was a blank square
             numOfEachLetter[letterMapping]++;
         } else {
+            oneLetterOnBoard = TRUE;
             // existing tile on board
             if(curLetterOnBoard != wordToPlay[i]) {
+                // check it matches
                 return FALSE;
             }
         }
     }
 
+    if(!oneLetterOnBoard) {
+        // no letters on the board
+        return FALSE;
+    }
+
     for(j=FIRST_LETTER;j<=LAST_LETTER;j++) {
-        int numOfJInWord = numCharInString(j, wordToPlay);
+        int numOfJInWord = numOfEachLetter[ mapLetterToInt(j) ];
         int numOfJOnRack = numCharInString(j, currentPlayerRack);
 
         if(numOfJInWord > numOfJOnRack) {
@@ -174,6 +311,11 @@ int scoreMove(player playerToMove, int row, int col, wordRef wordToPlay,
             score += scoreLetter(wordToPlay[i]);
         }
 
+        // check if it gets the full rack bonus
+        if(wordLength == RACK_SIZE) {
+            score += FULL_RACK_BONUS;
+        }
+
         return score;
     } else {
         return ILLEGAL_MOVE_SCORE;
@@ -187,7 +329,40 @@ void playMove(player playerToMove, int row, int col, wordRef wordToPlay,
     assert(playerToMove < BOARD_SIZE);
     assert(isLegalMove(playerToMove,row,col,wordToPlay,dirToMove));
 
+    int wordLength = strlen(wordToPlay);
+
     // place each tile on the board
+    int i;
+    for(i=0;i<wordLength;i++) {
+        int r = row;
+        int c = col;
+
+        if(dirToMove == HORIZONTAL) {
+            c += i;
+        } else if(dirToMove == VERTICAL) {
+            r += i;
+        }
+        
+        letter curLetter = getCell(r,c);
+        if(isValidLetter(curLetter) == FALSE) {
+            // blank square
+            setCell(r,c,curLetter);
+
+            deleteSingleLetterFromRack( getPlayerRack(playerToMove),
+                                        wordToPlay[i] );
+
+            // check if there's still any tiles left
+            if(numTilesRemaining() > 0) {
+                addSingleLetterToRack( getPlayerRack(playerToMove),
+                                       getNextTile() );
+            }
+        }
+    }
+
+    // adjust scores
+    setScore( playerToMove, getScore(playerToMove) +
+                           scoreMove(playerToMove, row, col, wordToPlay,
+                                     dirToMove) );
 }
 
 /* STATIC FUNCTION IMPLEMENTATIONS */
@@ -223,4 +398,15 @@ static int scoreLetter(letter letterToScore) {
     assert(letterToScore <= LAST_LETTER);
 
     return letterValues[mapLetterToInt(letterToScore)];
+}
+
+static void sortRack(rackRef rackToSort) {
+    assert(rackToSort != NULL);
+
+    int rackLength = rackSize(rackToSort);
+    qsort( rackToSort, rackLength, sizeof(letter), alphabeticCompare );
+}
+
+static int alphabeticCompare(const void *a, const void *b) {
+    return ( *(letter*)a - *(letter*)b );
 }

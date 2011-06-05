@@ -10,11 +10,16 @@
 
 /* Constants */
 
+#ifndef TRUE
+typedef int bool;
 #define TRUE 1
 #define FALSE 0
+#endif
 
 #define BOARD_SIZE 15
+
 #define RACK_SIZE 7
+#define TOTAL_TILES 98
 
 #define NUM_PLAYERS 2
 #define MAX_PLAYERS 4
@@ -33,8 +38,9 @@
 #define INITIAL -1
 #define ILLEGAL_MOVE_SCORE (-(1<<30))
 
+#define FULL_RACK_BONUS 50
+
 // (struct) Typedefs
-typedef int bool;
 
 // board representation
 
@@ -45,7 +51,7 @@ typedef int bool;
 typedef char letter;
 
 // stores the letters on the board
-typedef letter board[BOARD_SIZE][BOARD_SIZE];
+typedef letter board[BOARD_SIZE+1][BOARD_SIZE+1];
 
 // move
 
@@ -58,7 +64,7 @@ typedef bool direction;
 
 
 // racks are a string (essentially)
-typedef letter rack[RACK_SIZE];
+typedef letter rack[RACK_SIZE+1];
 typedef letter *rackRef;
 
 
@@ -85,8 +91,40 @@ letter getCell(int row, int col);
 // for a given player, returns a (pointer to) rack
 rackRef getPlayerRack(player playerNum);
 
+// clears a rack
+void clearRack(rackRef rackToClear);
+
+// given a letter, delete one occurence of it from the rack
+// and maintain sorted order
+// PRECONDITION: letter appears on the rack
+void deleteSingleLetterFromRack(rackRef rackToChange, letter letterToRemove);
+
+// given a letter, add one of it to the rack
+// PRECONDITION: rack is not full
+// maintain sorted order
+void addSingleLetterToRack(rackRef rackToChange, letter letterToAdd);
+
 // returns the number of tiles on the rack
 int rackSize(rackRef rackToCheck);
+
+// bag related
+
+// randomly shuffles the bag and resets the bag counter
+void shuffleBag(void);
+
+// returns the next tile in the bag and increments the bag counter
+letter getNextTile(void);
+
+// returns the number of tiles left in the bag
+int numTilesRemaining(void);
+
+// player related
+
+// returns the score of the given player
+int getScore(player playerToCheck);
+
+// sets the score of the given player
+void setScore(player playerToModify, int scoreToSet);
 
 // move related
 
@@ -104,5 +142,4 @@ void playMove(player playerToMove, int row, int col, wordRef wordToPlay,
               direction dirToMove);
 
 /* Global Vars */
-int letterValues[NUM_LETTERS] = {1,3,3,2,1,4,2,4,1,8,5,1,3,
-                                 1,1,3,10,1,1,1,1,4,4,8,4,10};
+extern letter tileBag[TOTAL_TILES];
