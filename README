@@ -1,1 +1,5 @@
-git is awesome. no really. like. OR-SUM! ...
+Enable swapping of letters from the bag. REMEMBER to re-randomize the bag afterwards.
+
+For checking move legality: check that at least one of the move's letters corresponds to an empty position.
+
+For AI strategy, have an AI skill level between 1 and 10. Generate a random number in that range. If the random number is greater than the skill level, pass. Otherwise, play highest scoring legal move.
