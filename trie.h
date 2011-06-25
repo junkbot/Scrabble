@@ -11,7 +11,7 @@
 
 #define __TRIE
 
-#ifndef TRUE
+#ifndef bool
 typedef int bool;
 #define TRUE 1
 #define FALSE 0
@@ -49,6 +49,9 @@ bool hasWord(Trie trieToInspect, const char *wordToLookFor);
 
 // adds a word to the given Trie
 void addWord(Trie trieToModify, const char *wordToAdd);
+
+// checks if there's a word at this trie
+bool isTerminal(Trie trieToCheck);
 
 // reads in a list of words from a file and returns a Trie with the words
 Trie trieFromFile(FILE *inputFile);

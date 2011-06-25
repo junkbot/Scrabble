@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define DEBUG
+//#define DEBUG
 #ifdef DEBUG
 #include <stdio.h>
 #define D(x...) fprintf(stderr,x)
@@ -115,6 +115,22 @@ void clearRack(rackRef rackToClear) {
 	}
 }
 
+bool isInRack(rackRef rackToSearch, letter letterTarget) {
+    assert(rackToSearch != NULL);
+    assert(FIRST_LETTER <= letterTarget);
+    assert(letterTarget <= LAST_LETTER);
+
+    int numLettersOnRack = rackSize(rackToSearch);
+
+    int i;
+    for(i=0;i<numLettersOnRack;i++) {
+        if(rackToSearch[i] == letterTarget) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 void deleteSingleLetterFromRack(rackRef rackToChange, letter letterToRemove) {
 	assert(FIRST_LETTER <= letterToRemove);
 	assert(letterToRemove <= LAST_LETTER);
@@ -162,8 +178,6 @@ int rackSize(rackRef rackToCheck) {
 // bag
 
 void shuffleBag(void) {
-    nextTile = 0;
-
     srand( time(NULL) );
 
     int i;
@@ -180,6 +194,10 @@ void shuffleBag(void) {
     }
     D("\n");
 #endif
+}
+
+void resetBag(void) {
+    nextTile = 0;
 }
 
 letter getNextTile(void) {
@@ -219,12 +237,17 @@ bool isLegalMove(player playerToMove, int row, int col, wordRef wordToPlay,
     assert(playerToMove >= 0);
     assert(playerToMove < NUM_PLAYERS);
 
+//    D("isLegalMove: %s\n",wordToPlay);
+
     if(row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) {
-        D("co-ordinates out of bounds.\n");
+        printf("co-ordinates out of bounds.\n");
         return FALSE;
     }
 
     int wordLength = strlen(wordToPlay);
+
+    assert(wordLength > 0);
+
     rackRef currentPlayerRack = getPlayerRack(playerToMove);
 
     // iterators
@@ -234,7 +257,7 @@ bool isLegalMove(player playerToMove, int row, int col, wordRef wordToPlay,
     // for each letter in the word, check that it is a valid letter
     for(i=0;i<wordLength;i++) {
         if(isValidLetter(wordToPlay[i]) == FALSE) {
-            D("invalid letter: '%c'\n",wordToPlay[i]);
+            printf("invalid letter: '%c'\n",wordToPlay[i]);
             return FALSE;
         }
     }
@@ -248,7 +271,7 @@ bool isLegalMove(player playerToMove, int row, int col, wordRef wordToPlay,
     }
 
     if(lastCell >= BOARD_SIZE) {
-        D("word is too long.\n");
+        printf("word is too long.\n");
         return FALSE;
     }
 
@@ -260,6 +283,9 @@ bool isLegalMove(player playerToMove, int row, int col, wordRef wordToPlay,
 
     // check if any of the letters is on the board
     bool oneLetterOnBoard = FALSE;
+
+    // check if a tile from the rack is being used
+    bool oneLetterFromRack = FALSE;
 
     for(i=0;i<wordLength;i++) {
         int letterRow = row;
@@ -280,6 +306,9 @@ bool isLegalMove(player playerToMove, int row, int col, wordRef wordToPlay,
         if(isValidLetter(curLetterOnBoard) == FALSE) {
             // blank square
             int letterMapping = mapLetterToInt(wordToPlay[i]);
+
+            oneLetterFromRack = TRUE;
+    //        D("oneLetterFromRack = %d\n",oneLetterFromRack);
 
             // only add because it was a blank square
             numOfEachLetter[letterMapping]++;
@@ -321,7 +350,15 @@ bool isLegalMove(player playerToMove, int row, int col, wordRef wordToPlay,
 
     if(oneLetterOnBoard == FALSE) {
         // no letters on the board
-        D("not linked to any existing letters on board\n");
+        printf("not linked to any existing letters on board\n");
+
+        return FALSE;
+    }
+
+
+//    D("oneLetterFromRack = %d\n",oneLetterFromRack);
+    if(oneLetterFromRack == FALSE) {
+        printf("no letters from rack used!\n");
 
         return FALSE;
     }
@@ -386,6 +423,8 @@ void playMove(player playerToMove, int row, int col, wordRef wordToPlay,
         // place each tile on the board
         int numTilesPlaced = 0;
 
+        int moveScore = scoreMove(playerToMove, row, col, wordToPlay, dirToMove);
+
         int i;
         for(i=0;i<wordLength;i++) {
             int r = row;
@@ -416,8 +455,6 @@ void playMove(player playerToMove, int row, int col, wordRef wordToPlay,
             }
         }
 
-        int moveScore = scoreMove(playerToMove, row, col, wordToPlay, dirToMove);
-
         if(numTilesPlaced == RACK_SIZE) {
             moveScore += FULL_RACK_BONUS;
         }
@@ -430,6 +467,10 @@ void playMove(player playerToMove, int row, int col, wordRef wordToPlay,
 // dict
 void setDictTrie(Trie trieToSet) {
     dict = trieToSet;
+}
+
+Trie getDictTrie(void) {
+    return dict;
 }
 
 /* STATIC FUNCTION IMPLEMENTATIONS */

@@ -15,8 +15,8 @@
 
 // a macro which shortens my debugging output statements
 // they disappear at compile-time if i comment out the following line
-// #define DEBUG
 
+//#define DEBUG
 #ifdef DEBUG
 #define D(x...) fprintf(stderr,"DEBUG: ***** "x)
 #else
@@ -130,6 +130,12 @@ void addWord(Trie trieToModify, const char *wordToAdd) {
 
     // increase number of words in the Trie
     trieToModify->size++;
+}
+
+bool isTerminal(Trie trieToCheck) {
+    assert(trieToCheck != NULL);
+
+    return trieToCheck->wordEndsHere;
 }
 
 Trie trieFromFile(FILE *inputFile) {

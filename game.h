@@ -10,6 +10,8 @@
 
 /* Constants */
 
+#define __GAME
+
 #ifndef __TRIE
 #include "trie.h"
 #endif
@@ -68,7 +70,6 @@ typedef letter *wordRef;
 // direction a word is played in
 typedef bool direction;
 
-
 // racks are a string (essentially)
 typedef letter rack[RACK_SIZE+1];
 typedef letter *rackRef;
@@ -91,7 +92,6 @@ void setCell(int row, int col, letter tileToPlace);
 // a non-letter otherwise
 letter getCell(int row, int col);
 
-
 // rack related
 
 // for a given player, returns a (pointer to) rack
@@ -99,6 +99,9 @@ rackRef getPlayerRack(player playerNum);
 
 // clears a rack
 void clearRack(rackRef rackToClear);
+
+// given a letter finds if it is in the rack
+bool isInRack(rackRef rackToSearch, letter letterTarget);
 
 // given a letter, delete one occurence of it from the rack
 // and maintain sorted order
@@ -115,8 +118,11 @@ int rackSize(rackRef rackToCheck);
 
 // bag related
 
-// randomly shuffles the bag and resets the bag counter
+// randomly shuffles the bag
 void shuffleBag(void);
+
+// sets the bag counter back to the beginning
+void resetBag(void);
 
 // returns the next tile in the bag and increments the bag counter
 letter getNextTile(void);
@@ -149,6 +155,8 @@ void playMove(player playerToMove, int row, int col, wordRef wordToPlay,
 
 // dictionary
 void setDictTrie(Trie trieToSet);
+
+Trie getDictTrie(void);
 
 /* Global Vars */
 extern letter tileBag[TOTAL_TILES];

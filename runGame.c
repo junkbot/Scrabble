@@ -14,12 +14,17 @@
 #include "trie.h"
 #endif
 
+#include "ai.h"
+
 #define DEBUG
 #ifdef DEBUG
 #define D(x...) fprintf(stderr,x)
 #else
 #define D(x...)
 #endif
+
+#define HUMAN 0
+#define AI 1
 
 // command-line prints
 #define EMPTY_SQUARE_CHAR "."
@@ -54,10 +59,16 @@ int main(int argc, char *argv[]) {
     numConsecPasses = 0;
 
     while(numConsecPasses < NUM_PLAYERS) {
+        D("NEXT TURN!\n");
         currentPlayer = turnNumber % NUM_PLAYERS;
-
         printAll();
-        playTurn();
+
+        if(currentPlayer == AI) {
+            makeMove(currentPlayer, getPlayerRack(currentPlayer), getDictTrie());
+            D("got here!\n");
+        } else {
+            playTurn();
+        }
 
         turnNumber++;
     }
@@ -69,6 +80,7 @@ void initialiseGame(void) {
     initDict();
 
     shuffleBag();
+    resetBag();
 
     clearRacks();
     dealRacks();
@@ -125,7 +137,9 @@ void playTurn(void) {
 #endif
 
             if(isLegalMove(currentPlayer,row,col,wordToPlay,dir)) {
+                D("before play\n");
                 playMove(currentPlayer,row,col,wordToPlay,dir);
+                D("after play\n");
                 moveLegal = TRUE;
             } else {
                 printf("Illegal move.\n");
