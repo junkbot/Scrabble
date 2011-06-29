@@ -2,6 +2,9 @@ C := gcc
 CPP := g++
 CFLAGS += -O -Wall -g
 
+all: runGame
+	$(CPP) $(CFLAGS) -o scrabble playGame.cpp runGame.o ai.o game.o trie.o
+
 test_extend:
 	make test CFLAGS=-DEXTEND
 
@@ -13,9 +16,6 @@ testGame: game
 
 testTrie: trie
 	$(C) $(CFLAGS) -c testTrie.c
-
-playGame: runGame
-	$(CPP) $(CFLAGS) -o scrabble playGame.cpp runGame.o ai.o game.o trie.o
 
 runGame: game trie ai
 	$(C) $(CFLAGS) -c runGame.c
