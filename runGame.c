@@ -8,6 +8,8 @@
 #include <time.h>
 #include <ctype.h>
 
+#include "runGame.h"
+
 #include "game.h"
 
 #ifndef __TRIE
@@ -51,7 +53,7 @@ static void printRacks(void);
 player currentPlayer;
 int numConsecPasses;
 
-int main(int argc, char *argv[]) {
+void runGame(void) {
     
     initialiseGame();
 
@@ -72,8 +74,6 @@ int main(int argc, char *argv[]) {
 
         turnNumber++;
     }
-
-	return EXIT_SUCCESS;
 }
 
 void initialiseGame(void) {

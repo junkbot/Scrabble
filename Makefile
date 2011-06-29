@@ -1,4 +1,5 @@
-C := g++
+C := gcc
+CPP := g++
 CFLAGS += -O -Wall -g
 
 test_extend:
@@ -10,17 +11,20 @@ test: testGame testTrie ai
 testGame: game
 	$(C) $(CFLAGS) -c testGame.c
 
+testTrie: trie
+	$(C) $(CFLAGS) -c testTrie.c
+
+playGame: runGame
+	$(CPP) $(CFLAGS) -o scrabble playGame.cpp runGame.o ai.o game.o trie.o
+
 runGame: game trie ai
-	$(C) $(CFLAGS) -o runGame runGame.c game.o trie.o ai.o
+	$(C) $(CFLAGS) -c runGame.c
 
 ai: game trie
 	$(C) $(CFLAGS) -c ai.c
 
 game: trie
 	$(C) $(CFLAGS) -c game.c
-
-testTrie: trie
-	$(C) $(CFLAGS) -c testTrie.c
 
 trie:
 	$(C) $(CFLAGS) -c trie.c
